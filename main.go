@@ -27,7 +27,22 @@ func main() {
 		if parts[0] == "exit" {
 			return
 		}
-
+		if parts[0] == "cd" {
+			if len(parts) < 2 {
+				fmt.Println("cd: missing argument")
+				continue
+			}
+			if len(parts) > 2 {
+				fmt.Println("cd: too many arguments")
+				continue
+			}
+			path := parts[1]
+			err := os.Chdir(path)
+			if err != nil {	
+				fmt.Printf("cd: %s: %s\n", path, err)
+				continue
+			}
+		}
 		cmd := exec.Command(parts[0], parts[1:]...)
 
 		output, err := cmd.CombinedOutput()

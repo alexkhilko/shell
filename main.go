@@ -32,8 +32,8 @@ func main() {
 
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Printf("Error executing command: %s\n", err)
-			return
+			fmt.Println("Error executing command:", err)
+			continue
 		}
 
 		fmt.Print(string(output))

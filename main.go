@@ -7,9 +7,15 @@ import (
 	"os/exec"
 	"strings"
 	"io"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
+	// Channel to capture interrupt signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT)
+
 	for {
 		fmt.Print("sh> ")
 		reader := bufio.NewReader(os.Stdin)
@@ -24,6 +30,8 @@ func main() {
 		// Initial input is from the standard input
 		var inputPipe io.Reader = os.Stdin
 		var cmds []*exec.Cmd
+		done := make(chan error, len(commands))
+
 		for i, command := range commands {
 			command = strings.TrimSpace(command)
 			parts := strings.Fields(command)
@@ -70,13 +78,31 @@ func main() {
 				break
 			}
 			cmds = append(cmds, cmd)
+
+			go func(cmd *exec.Cmd) {
+				done <- cmd.Wait()
+			}(cmd)
 		}
-		for _, cmd := range cmds {
-			if err := cmd.Wait(); err != nil {
-				fmt.Printf("Error waiting for command: %s, %v\n", strings.Join(cmd.Args, " "), err)
-				if exitErr, ok := err.(*exec.ExitError); ok {
-					fmt.Println("Exit status:", exitErr.ExitCode())
+
+		go func() {
+			for sig := range sigChan {
+				if sig == syscall.SIGINT {
+					fmt.Printf("Received signal 1: %v\n", sig)
+					for _, cmd := range cmds {
+						if cmd.Process != nil {
+							_ = cmd.Process.Signal(sig)
+						}
+					}
+				} else {
+					fmt.Printf("Received signal: %v\n", sig)
+				
 				}
+			}
+		}()
+
+		for range cmds {
+			if err := <-done; err != nil {
+				fmt.Printf("Error waiting for command: %v\n", err)
 			}
 		}
 	}

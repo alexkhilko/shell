@@ -19,3 +19,6 @@
 
 # Go workspace file
 go.work
+
+# file where history of commands run in shell is saved
+history.txt
